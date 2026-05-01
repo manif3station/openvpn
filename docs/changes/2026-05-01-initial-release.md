@@ -10,6 +10,7 @@
 - moved the OpenVPN process-management lifting into skill-owned Perl modules and stopped declaring `openvpn` as an apt or Homebrew dependency
 - added Windows 11 PowerShell-aware process handling, binary defaults, and config discovery
 - added an explicit `cpanfile` so the dependency gate remains present even with core-only Perl dependencies
+- expanded that manifest to list the core Perl modules in use and separately note the skill-local modules
 
 ## Why it changed
 

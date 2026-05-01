@@ -24,6 +24,17 @@ Perl dependency manifest:
 cpanfile
 ```
 
+The manifest explicitly records:
+
+- `File::Basename`
+- `File::Path`
+- `File::Spec`
+- `JSON::PP`
+- `POSIX`
+- `Digest::SHA`
+
+The skill-local modules `OpenVPN::Launcher` and `OpenVPN::TOTP` are documented in the same file as local implementation modules.
+
 ## Setup
 
 Interactive:

@@ -1,5 +1,8 @@
 Revision history for openvpn
 
+0.04 2026-05-01
+    - expanded `cpanfile` so it explicitly records the core Perl modules used by the skill and names the skill-local modules separately
+
 0.03 2026-05-01
     - added an explicit `cpanfile` to keep the dependency gate present even though the skill currently uses only Perl core modules and skill-local modules
 

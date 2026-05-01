@@ -1,4 +1,13 @@
 requires 'perl', '5.38.0';
 
-# This skill currently uses only Perl core modules plus skill-local modules.
-# Keep this file so the dependency gate stays explicit as the skill evolves.
+# Explicit core-module dependency record for this skill.
+requires 'File::Basename';
+requires 'File::Path';
+requires 'File::Spec';
+requires 'JSON::PP';
+requires 'POSIX';
+requires 'Digest::SHA';
+
+# Skill-local modules used by the implementation:
+# - OpenVPN::Launcher
+# - OpenVPN::TOTP

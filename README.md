@@ -66,7 +66,7 @@ This skill expects an existing `openvpn` executable on the machine or an explici
 
 The skill does not try to install `openvpn` through `apt` or Homebrew.
 
-The skill ships a [cpanfile](/home/mv/projects/skills/skills/openvpn/cpanfile) so the dependency gate stays explicit. At `0.03`, it records that the implementation uses Perl core modules plus skill-local modules only.
+The skill ships a [cpanfile](/home/mv/projects/skills/skills/openvpn/cpanfile) so the dependency gate stays explicit. At `0.04`, it records the core Perl modules the skill relies on and also names the skill-local modules used by the implementation.
 
 ## How To Use It
 

@@ -21,7 +21,7 @@ docker compose -f ~/projects/skills/docker-compose.testing.yml run --rm perl-tes
   - `lib/OpenVPN/Manager.pm` `100.0%` statement and `100.0%` subroutine
   - `lib/OpenVPN/Launcher.pm` `100.0%` statement and `100.0%` subroutine
   - `lib/OpenVPN/TOTP.pm` `100.0%` statement and `100.0%` subroutine
-- `cpanfile` is present and records the current core-only Perl dependency shape
+- `cpanfile` is present and explicitly records the core Perl modules used by the skill, with skill-local modules noted separately
 - Installed runtime proof passed through the real `dashboard openvpn.*` entrypoints with a fake `openvpn` executable
 - Simulated Windows 11 PowerShell paths passed in Docker through launcher tests for:
   - `openvpn.exe` default binary selection
