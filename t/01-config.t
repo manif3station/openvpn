@@ -14,5 +14,9 @@ is( $config->{collectors}[0]{name}, 'connector', 'connector collector is declare
 is( $config->{collectors}[0]{command}, 'dashboard openvpn.connect --collector', 'collector runs connect in collector mode' );
 is( $config->{collectors}[0]{interval}, 10, 'collector interval is ten seconds' );
 is( $config->{collectors}[0]{indicator}{icon}, 'OVPN[% status_icon %]', 'collector indicator uses status icon template' );
+ok( -x 'cli/setup', 'setup CLI entrypoint is executable' );
+ok( -x 'cli/connect', 'connect CLI entrypoint is executable' );
+ok( -x 'cli/disconnect', 'disconnect CLI entrypoint is executable' );
+ok( -x 'cli/noreconnect', 'noreconnect CLI entrypoint is executable' );
 
 done_testing;
