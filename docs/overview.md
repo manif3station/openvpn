@@ -7,6 +7,7 @@ The skill keeps the reconnect flow inside DD instead of pushing the user back in
 The main behavior is:
 
 - `dashboard openvpn.setup` records the username, password, and optional 2FA secret in `~/.openvpn.env`
+- `dashboard openvpn.setup` accepts a six-digit suffix, a raw TOTP Base32 secret, or an `otpauth://` URI for the 2FA value
 - `dashboard openvpn.connect` performs one connection attempt and leaves reconnect disabled afterward
 - `dashboard openvpn.connect --auto` performs a connection attempt and enables managed reconnect
 - `dashboard openvpn.connect --collector` is the collector path that reports indicator state and retries reconnect when allowed
