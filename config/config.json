@@ -1,0 +1,13 @@
+{
+  "collectors": [
+    {
+      "name": "connector",
+      "command": "dashboard openvpn.connect --collector",
+      "cwd": "home",
+      "interval": 10,
+      "indicator": {
+        "icon": "OVPN[% status_icon %]"
+      }
+    }
+  ]
+}

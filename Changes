@@ -1,0 +1,7 @@
+Revision history for openvpn
+
+0.01 2026-05-01
+    - created the initial `openvpn` skill with setup, connect, disconnect, and noreconnect commands
+    - added collector-backed OpenVPN connection monitoring with auto reconnect and retry exhaustion handling
+    - stored OpenVPN credentials in `~/.openvpn.env` and generated auth-user-pass files from that state
+    - added TOTP and `otpauth://` secret handling for six-digit reconnect suffix generation
