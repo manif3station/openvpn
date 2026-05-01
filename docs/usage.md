@@ -18,6 +18,12 @@ Windows 11 PowerShell install:
 dashboard skills install git@github.mf:manif3station/openvpn.git
 ```
 
+Perl dependency manifest:
+
+```text
+cpanfile
+```
+
 ## Setup
 
 Interactive:

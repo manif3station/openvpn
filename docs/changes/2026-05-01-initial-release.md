@@ -9,6 +9,7 @@
 - added TOTP and `otpauth://` secret handling for generated six-digit reconnect suffixes
 - moved the OpenVPN process-management lifting into skill-owned Perl modules and stopped declaring `openvpn` as an apt or Homebrew dependency
 - added Windows 11 PowerShell-aware process handling, binary defaults, and config discovery
+- added an explicit `cpanfile` so the dependency gate remains present even with core-only Perl dependencies
 
 ## Why it changed
 

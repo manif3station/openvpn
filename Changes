@@ -1,5 +1,8 @@
 Revision history for openvpn
 
+0.03 2026-05-01
+    - added an explicit `cpanfile` to keep the dependency gate present even though the skill currently uses only Perl core modules and skill-local modules
+
 0.02 2026-05-01
     - created the initial `openvpn` skill with setup, connect, disconnect, and noreconnect commands
     - added collector-backed OpenVPN connection monitoring with auto reconnect and retry exhaustion handling
