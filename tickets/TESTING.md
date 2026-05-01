@@ -28,6 +28,13 @@ docker compose -f ~/projects/skills/docker-compose.testing.yml run --rm perl-tes
   - Windows pid lookup and taskkill-style stop handling
   - Windows config discovery under `ProgramFiles` and user-profile config paths
   - visible-prompt fallback for hidden secret entry
+- PowerShell runtime proof passed in Docker through the real skill CLI wrappers:
+  - `perl cli/connect --collector` returned `status=not_setup` with a nonzero exit code
+  - `perl cli/setup -u ... -p ... -2fa 'otpauth://...'` returned `two_factor=totp`
+  - `perl cli/connect --auto` returned `status=connected`
+  - `perl cli/noreconnect` returned `status=reconnect_disabled`
+  - `perl cli/disconnect` returned `status=disconnected`
+  - `perl cli/connect --collector` after disconnect with reconnect disabled returned `status=reconnect_disabled` with a nonzero exit code
 - Proven runtime states:
   - `dashboard openvpn.connect --collector` before setup returned `status=not_setup`, `status_icon=?`, and a nonzero exit code
   - `dashboard openvpn.setup -u ... -p ... -2fa 'otpauth://...'` wrote `~/.openvpn.env`
