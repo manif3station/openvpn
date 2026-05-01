@@ -54,12 +54,17 @@ For local development in this workspace:
 dashboard skills install ~/projects/skills/skills/openvpn
 ```
 
-## Runtime Dependencies
+## Platform Notes
 
-This skill depends on the `openvpn` executable:
+- Linux and macOS use the host `openvpn` binary through the skill-owned Perl launcher module
+- Windows 11 with PowerShell is supported through the same skill-owned Perl launcher module, with Windows-aware process handling and `openvpn.exe` defaults
+- the skill does not install OpenVPN itself; point `OPENVPN_BIN` at your existing binary if it is not already on `PATH`
 
-- Debian or Ubuntu: `aptfile`
-- macOS: `brewfile`
+## Runtime Dependency
+
+This skill expects an existing `openvpn` executable on the machine or an explicit `OPENVPN_BIN` value in `~/.openvpn.env`.
+
+The skill does not try to install `openvpn` through `apt` or Homebrew.
 
 ## How To Use It
 
@@ -130,6 +135,17 @@ Supported variables:
 - the first `*.ovpn` file under `~/.openvpn/`
 - the first `*.ovpn` file under `~/.config/openvpn/`
 
+On Windows 11, the skill also checks:
+
+- `~/OpenVPN/config/client.ovpn`
+- `~/OpenVPN/config/config.ovpn`
+- `~/config/openvpn/client.ovpn`
+- `~/config/openvpn/config.ovpn`
+- `%ProgramFiles%/OpenVPN/config/client.ovpn`
+- `%ProgramFiles%/OpenVPN/config/config.ovpn`
+- `%ProgramFiles(x86)%/OpenVPN/config/client.ovpn`
+- `%ProgramFiles(x86)%/OpenVPN/config/config.ovpn`
+
 ## Indicator And Collector Behavior
 
 The shipped collector config is in `config/config.json` and runs:
@@ -183,6 +199,14 @@ If `OPENVPN_2FA` is not six digits, the skill treats it as a TOTP secret and gen
 
 ```text
 If `OPENVPN_2FA` is an `otpauth://` URI, the skill extracts the `secret=` value and generates the current six-digit code from that secret.
+```
+
+```text
+If `openvpn` is not on `PATH`, set `OPENVPN_BIN=~/path/to/openvpn` in `~/.openvpn.env`.
+```
+
+```powershell
+dashboard openvpn.setup -u alice -p 'secret-password' -2fa 'otpauth://totp/DD?secret=JBSWY3DPEHPK3PXP'
 ```
 
 ```text

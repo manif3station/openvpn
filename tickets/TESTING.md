@@ -16,10 +16,17 @@ docker compose -f ~/projects/skills/docker-compose.testing.yml run --rm perl-tes
 ## Latest Result
 
 - Docker functional tests passed: `Files=7, Tests=98`
+- Docker functional tests passed: `Files=8, Tests=129`
 - Docker coverage passed:
   - `lib/OpenVPN/Manager.pm` `100.0%` statement and `100.0%` subroutine
+  - `lib/OpenVPN/Launcher.pm` `100.0%` statement and `100.0%` subroutine
   - `lib/OpenVPN/TOTP.pm` `100.0%` statement and `100.0%` subroutine
 - Installed runtime proof passed through the real `dashboard openvpn.*` entrypoints with a fake `openvpn` executable
+- Simulated Windows 11 PowerShell paths passed in Docker through launcher tests for:
+  - `openvpn.exe` default binary selection
+  - Windows pid lookup and taskkill-style stop handling
+  - Windows config discovery under `ProgramFiles` and user-profile config paths
+  - visible-prompt fallback for hidden secret entry
 - Proven runtime states:
   - `dashboard openvpn.connect --collector` before setup returned `status=not_setup`, `status_icon=?`, and a nonzero exit code
   - `dashboard openvpn.setup -u ... -p ... -2fa 'otpauth://...'` wrote `~/.openvpn.env`

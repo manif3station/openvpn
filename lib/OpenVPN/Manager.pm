@@ -7,6 +7,7 @@ use File::Basename qw(dirname);
 use File::Path qw(make_path);
 use File::Spec;
 use JSON::PP qw(decode_json encode_json);
+use OpenVPN::Launcher;
 use OpenVPN::TOTP;
 
 sub new {
@@ -14,7 +15,10 @@ sub new {
     my $self = bless {
         home          => $args{home} || $ENV{HOME},
         env           => $args{env} || \%ENV,
+        osname        => $args{osname} || $^O,
         system        => $args{system} || sub { return system(@_) >> 8 },
+        spawner       => $args{spawner},
+        capture       => $args{capture},
         sleep         => $args{sleep} || sub { sleep $_[0] },
         now           => $args{now} || sub { return time },
         stdin_fh      => $args{stdin_fh} || \*STDIN,
@@ -324,7 +328,7 @@ sub prompt_visible {
 
 sub prompt_hidden {
     my ( $self, $message ) = @_;
-    return $self->prompt_visible($message) if !$self->{interactive};
+    return $self->prompt_visible($message) if !$self->{interactive} || $self->{osname} eq 'MSWin32';
     print { $self->{stdout_fh} } $message;
     my $rc = $self->{system}->( 'stty', '-echo' );
     my $line = readline( $self->{stdin_fh} );
@@ -450,17 +454,12 @@ sub resolved_openvpn_config {
 
 sub find_openvpn_config {
     my ($self) = @_;
-    my @candidates = (
-        '~/.openvpn/config.ovpn',
-        '~/.openvpn/client.ovpn',
-        '~/.config/openvpn/client.ovpn',
-        '~/.config/openvpn/config.ovpn',
-    );
+    my @candidates = $self->default_config_candidates;
     for my $pattern (@candidates) {
-        my $path = $self->expand_tilde($pattern);
+        my $path = $pattern =~ /^~\// ? $self->expand_tilde($pattern) : $pattern;
         return $path if -f $path;
     }
-    for my $dir ( map { $self->expand_tilde($_) } qw(~/.openvpn ~/.config/openvpn) ) {
+    for my $dir ( $self->default_config_search_dirs ) {
         next if !-d $dir;
         opendir my $dh, $dir or next;
         my @files = sort grep { /\.ovpn\z/ && -f File::Spec->catfile( $dir, $_ ) } readdir $dh;
@@ -474,23 +473,11 @@ sub start_connection {
     my ( $self, $env ) = @_;
     my $config = $self->resolved_openvpn_config($env);
     my $auth_path = $self->write_auth_file($env);
-    unlink $self->pid_file if -f $self->pid_file && !$self->pid_alive( $self->current_pid );
-    my @cmd = (
-        $self->openvpn_bin($env),
-        '--daemon',
-        '--writepid', $self->pid_file,
-        '--log',      $self->log_file,
-        '--auth-user-pass', $auth_path,
-        '--config',   $config,
-        '--auth-nocache',
+    return $self->launcher->start(
+        env       => $env,
+        config    => $config,
+        auth_file => $auth_path,
     );
-    my $rc = $self->{system}->(@cmd);
-    die "openvpn failed with exit code $rc\n" if $rc != 0;
-    $self->{sleep}->(1);
-    my $pid = $self->current_pid;
-    die "OpenVPN did not create a pid file\n" if !$pid;
-    die "OpenVPN process is not running after connect attempt\n" if !$self->pid_alive($pid);
-    return $pid;
 }
 
 sub write_auth_file {
@@ -514,47 +501,27 @@ sub current_twofa_code {
 
 sub openvpn_bin {
     my ( $self, $env ) = @_;
-    return $self->{openvpn_bin} if defined $self->{openvpn_bin} && $self->{openvpn_bin} ne q{};
-    return $self->{env}{OPENVPN_BIN} if defined $self->{env}{OPENVPN_BIN} && $self->{env}{OPENVPN_BIN} ne q{};
-    return $env->{OPENVPN_BIN} if defined $env->{OPENVPN_BIN} && $env->{OPENVPN_BIN} ne q{};
-    return 'openvpn';
+    return $self->launcher->openvpn_bin($env);
 }
 
 sub current_pid {
     my ($self) = @_;
-    my $path = $self->pid_file;
-    return 0 if !-f $path;
-    open my $fh, '<', $path or return 0;
-    my $pid = <$fh>;
-    close $fh;
-    chomp $pid if defined $pid;
-    return $pid && $pid =~ /^\d+\z/ ? $pid : 0;
+    return $self->launcher->current_pid;
 }
 
 sub pid_alive {
     my ( $self, $pid ) = @_;
-    return 0 if !$pid;
-    return $self->{killer}->( 0, $pid ) ? 1 : 0;
+    return $self->launcher->pid_alive($pid);
 }
 
 sub is_connected {
     my ($self) = @_;
-    my $pid = $self->current_pid;
-    return $self->pid_alive($pid);
+    return $self->launcher->is_connected;
 }
 
 sub stop_connection {
     my ($self) = @_;
-    my $pid = $self->current_pid;
-    if ( $pid && $self->pid_alive($pid) ) {
-        $self->{killer}->( 'TERM', $pid );
-        for ( 1 .. 5 ) {
-            last if !$self->pid_alive($pid);
-            $self->{sleep}->(1);
-        }
-    }
-    unlink $self->pid_file if -f $self->pid_file;
-    return $pid;
+    return $self->launcher->stop;
 }
 
 sub handle_connect_failure {
@@ -631,6 +598,65 @@ sub expand_tilde {
     my ( $self, $path ) = @_;
     return $self->{home} . substr( $path, 1 ) if defined $path && $path =~ /^~\//;
     return $path;
+}
+
+sub default_config_candidates {
+    my ($self) = @_;
+    if ( $self->{osname} eq 'MSWin32' ) {
+        return (
+            File::Spec->catfile( $self->{home}, 'OpenVPN', 'config', 'client.ovpn' ),
+            File::Spec->catfile( $self->{home}, 'OpenVPN', 'config', 'config.ovpn' ),
+            File::Spec->catfile( $self->{home}, 'config', 'openvpn', 'client.ovpn' ),
+            File::Spec->catfile( $self->{home}, 'config', 'openvpn', 'config.ovpn' ),
+            map {
+                my $root = $self->{env}{$_};
+                defined $root && $root ne q{}
+                  ? (
+                    File::Spec->catfile( $root, 'OpenVPN', 'config', 'client.ovpn' ),
+                    File::Spec->catfile( $root, 'OpenVPN', 'config', 'config.ovpn' ),
+                  )
+                  : ()
+            } qw(ProgramFiles ProgramFiles(x86))
+        );
+    }
+
+    return (
+        '~/.openvpn/config.ovpn',
+        '~/.openvpn/client.ovpn',
+        '~/.config/openvpn/client.ovpn',
+        '~/.config/openvpn/config.ovpn',
+    );
+}
+
+sub default_config_search_dirs {
+    my ($self) = @_;
+    if ( $self->{osname} eq 'MSWin32' ) {
+        return (
+            File::Spec->catdir( $self->{home}, 'OpenVPN', 'config' ),
+            File::Spec->catdir( $self->{home}, 'config', 'openvpn' ),
+            map {
+                my $root = $self->{env}{$_};
+                defined $root && $root ne q{} ? File::Spec->catdir( $root, 'OpenVPN', 'config' ) : ()
+            } qw(ProgramFiles ProgramFiles(x86))
+        );
+    }
+    return map { $self->expand_tilde($_) } qw(~/.openvpn ~/.config/openvpn);
+}
+
+sub launcher {
+    my ($self) = @_;
+    return $self->{launcher} ||= OpenVPN::Launcher->new(
+        home        => $self->{home},
+        env         => $self->{env},
+        run_dir     => $self->run_dir,
+        osname      => $self->{osname},
+        openvpn_bin => $self->{openvpn_bin},
+        system      => $self->{system},
+        ( defined $self->{spawner} ? ( spawner => $self->{spawner} ) : () ),
+        ( defined $self->{capture} ? ( capture => $self->{capture} ) : () ),
+        sleep       => $self->{sleep},
+        killer      => $self->{killer},
+    );
 }
 
 1;

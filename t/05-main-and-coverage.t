@@ -250,6 +250,30 @@ sub fake_manager {
 }
 
 {
+    my $home = tempdir( CLEANUP => 1 );
+    my $pf   = File::Spec->catdir( $home, 'ProgramFiles' );
+    my $cfgd = File::Spec->catdir( $pf, 'OpenVPN', 'config' );
+    make_path($cfgd);
+    my $cfg = File::Spec->catfile( $cfgd, 'other.ovpn' );
+    open my $fh, '>', $cfg or die $!;
+    print {$fh} "client\n";
+    close $fh or die $!;
+    my $manager = OpenVPN::Manager->new(
+        home      => $home,
+        env       => { ProgramFiles => $pf },
+        osname    => 'MSWin32',
+        interactive => 0,
+    );
+    is( $manager->find_openvpn_config, $cfg, 'Windows config discovery checks Program Files OpenVPN config paths' );
+}
+
+{
+    my ( $manager ) = fake_manager( with_env => 1 );
+    ok( $manager->log_file =~ /openvpn\.log\z/, 'log_file returns the managed OpenVPN log path' );
+    ok( !$manager->pid_alive(0), 'pid_alive returns false for pid zero through the manager wrapper' );
+}
+
+{
     my ( $manager ) = fake_manager( with_env => 1 );
     my $uri_code = $manager->current_twofa_code('otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP');
     like( $uri_code, qr/^\d{6}\z/, 'current_twofa_code accepts an otpauth URI secret' );
@@ -292,6 +316,29 @@ sub fake_manager {
         'prompt_hidden toggles terminal echo around the hidden prompt'
     );
     is( $stdout, "OpenVPN secret: \n", 'prompt_hidden prints the prompt and a trailing newline' );
+}
+
+{
+    my $stdin_data = "windows-secret\n";
+    my $stdout = q{};
+    my @system_calls;
+    open my $stdin, '<', \$stdin_data or die $!;
+    open my $out, '>', \$stdout or die $!;
+    my ( $manager ) = fake_manager(
+        stdin_fh    => $stdin,
+        stdout_fh   => $out,
+        interactive => 1,
+        system      => sub {
+            push @system_calls, [@_];
+            return 0;
+        },
+        env    => {},
+    );
+    $manager->{osname} = 'MSWin32';
+    my $value = $manager->prompt_hidden('Windows secret: ');
+    is( $value, 'windows-secret', 'prompt_hidden falls back to a visible prompt on Windows' );
+    is_deeply( \@system_calls, [], 'prompt_hidden does not invoke stty on Windows' );
+    is( $stdout, 'Windows secret: ', 'Windows prompt_hidden uses the visible prompt output path' );
 }
 
 {

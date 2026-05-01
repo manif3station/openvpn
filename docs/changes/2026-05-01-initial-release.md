@@ -6,8 +6,9 @@
 - added `openvpn.setup`, `openvpn.connect`, `openvpn.disconnect`, and `openvpn.noreconnect`
 - added a collector-backed reconnect path through `dashboard openvpn.connect --collector`
 - stored setup values in `~/.openvpn.env`
-- added OpenVPN package declarations for Debian or Ubuntu and macOS
 - added TOTP and `otpauth://` secret handling for generated six-digit reconnect suffixes
+- moved the OpenVPN process-management lifting into skill-owned Perl modules and stopped declaring `openvpn` as an apt or Homebrew dependency
+- added Windows 11 PowerShell-aware process handling, binary defaults, and config discovery
 
 ## Why it changed
 

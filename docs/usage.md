@@ -12,6 +12,12 @@ Local workspace install:
 dashboard skills install ~/projects/skills/skills/openvpn
 ```
 
+Windows 11 PowerShell install:
+
+```powershell
+dashboard skills install git@github.mf:manif3station/openvpn.git
+```
+
 ## Setup
 
 Interactive:
@@ -31,6 +37,14 @@ The skill writes:
 ```text
 ~/.openvpn.env
 ```
+
+If `openvpn` is not on `PATH`, add this too:
+
+```text
+OPENVPN_BIN=~/path/to/openvpn
+```
+
+On Windows 11 PowerShell, `OPENVPN_BIN` will usually point at an `openvpn.exe` path.
 
 ## Connection Commands
 
@@ -106,5 +120,7 @@ If `OPENVPN_CONFIG` is not present in `~/.openvpn.env`, the skill tries these pa
 - use a six-digit `OPENVPN_2FA` only if your VPN actually expects a fixed suffix
 - use a non-six-digit `OPENVPN_2FA` value for a TOTP secret so the skill can generate the current six-digit code
 - use an `otpauth://` URI in `OPENVPN_2FA` if that is how your VPN team shares the TOTP secret
+- the skill does not install `openvpn` for you; keep your existing host install or set `OPENVPN_BIN`
+- on Windows 11 PowerShell, hidden password prompts fall back to visible prompts, so use non-interactive setup if you want to avoid typing secrets on screen
 - use `dashboard openvpn.connect --auto` after a five-failure lockout to re-enable reconnect attempts
 - use `dashboard openvpn.connect` if you want one connection attempt without turning reconnect back on
