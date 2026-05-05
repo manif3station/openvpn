@@ -17,10 +17,11 @@ Some OpenVPN deployments accept a normal username but require the password field
 This skill:
 
 - stores the OpenVPN username and password in `~/.openvpn.env`
-- optionally stores a 2FA value in the same file
-- treats a six-digit `OPENVPN_2FA` value as a static suffix
-- treats any other `OPENVPN_2FA` value as a TOTP secret or `otpauth://` URI and generates the current six-digit code for each connection attempt
+- optionally stores a 2FA value and config path in the same file
+- treats a six-digit `MFA` value as a static suffix
+- treats any other `MFA` value as a TOTP secret or `otpauth://` URI and generates the current six-digit code for each connection attempt
 - writes an `auth-user-pass` file on demand for OpenVPN
+- starts `openvpn` with `--auth-retry nointeract` so the managed CLI path does not fall back to a username/password popup
 - monitors the tunnel through a DD collector
 - attempts reconnect automatically after disconnect when auto reconnect is enabled
 - disables auto reconnect after five failed retry attempts
@@ -57,7 +58,7 @@ dashboard skills install ~/projects/skills/skills/openvpn
 ## Platform Notes
 
 - Linux and macOS use the host `openvpn` binary through the skill-owned Perl launcher module
-- Windows 11 with PowerShell is supported through the same skill-owned Perl launcher module, with Windows-aware process handling and `openvpn.exe` defaults
+- Windows 11 with PowerShell is supported through the same skill-owned Perl launcher module, with Windows-aware process handling, `openvpn.exe` defaults, and a runtime helper directory under `~/openvpn/config/dd-runtime`
 - the skill does not install OpenVPN itself; point `OPENVPN_BIN` at your existing binary if it is not already on `PATH`
 
 ## Runtime Dependency
@@ -66,7 +67,7 @@ This skill expects an existing `openvpn` executable on the machine or an explici
 
 The skill does not try to install `openvpn` through `apt` or Homebrew.
 
-The skill ships a [cpanfile](/home/mv/projects/skills/skills/openvpn/cpanfile) so the dependency gate stays explicit. At `0.04`, it records the core Perl modules the skill relies on and also names the skill-local modules used by the implementation.
+The skill ships a [cpanfile](/home/mv/projects/skills/skills/openvpn/cpanfile) so the dependency gate stays explicit. At `0.05`, it records the core Perl modules the skill relies on and also names the skill-local modules used by the implementation.
 
 ## How To Use It
 
@@ -79,7 +80,7 @@ dashboard openvpn.setup
 Non-interactive setup:
 
 ```bash
-dashboard openvpn.setup -u alice -p 'secret-password' -2fa JBSWY3DPEHPK3PXP
+dashboard openvpn.setup -u alice -p 'secret-password' -2fa JBSWY3DPEHPK3PXP -c '~/openvpn/config/work.ovpn'
 ```
 
 One-off connect without turning automatic reconnect back on:
@@ -122,14 +123,23 @@ The skill stores user-managed values in:
 
 Supported variables:
 
+- `USERNAME`
+- `PASSWORD`
+- `MFA`
+- `CONFIG`
+- `OPENVPN_BIN`
+
+Legacy compatibility keys are still accepted on read:
+
 - `OPENVPN_USERNAME`
 - `OPENVPN_PASSWORD`
 - `OPENVPN_2FA`
 - `OPENVPN_CONFIG`
-- `OPENVPN_BIN`
 
-`OPENVPN_CONFIG` is optional. If it is not present, the skill looks for one `.ovpn` file in these places:
+`CONFIG` is optional. If it is not present, the skill looks for one `.ovpn` file in these places:
 
+- `~/openvpn/config/client.ovpn`
+- `~/openvpn/config/config.ovpn`
 - `~/.openvpn/config.ovpn`
 - `~/.openvpn/client.ovpn`
 - `~/.config/openvpn/client.ovpn`
@@ -188,19 +198,19 @@ If `~/.openvpn.env` is incomplete or missing, the collector returns `OVPN?` and 
 ```
 
 ```text
-If no OpenVPN config file can be found automatically, set `OPENVPN_CONFIG=~/path/to/profile.ovpn` in `~/.openvpn.env`.
+If no OpenVPN config file can be found automatically, set `CONFIG=~/path/to/profile.ovpn` in `~/.openvpn.env`.
 ```
 
 ```text
-If `OPENVPN_2FA` is exactly six digits, the skill uses it as a literal suffix.
+If `MFA` is exactly six digits, the skill uses it as a literal suffix.
 ```
 
 ```text
-If `OPENVPN_2FA` is not six digits, the skill treats it as a TOTP secret and generates a fresh six-digit code for each connect attempt.
+If `MFA` is not six digits, the skill treats it as a TOTP secret and generates a fresh six-digit code for each connect attempt.
 ```
 
 ```text
-If `OPENVPN_2FA` is an `otpauth://` URI, the skill extracts the `secret=` value and generates the current six-digit code from that secret.
+If `MFA` is an `otpauth://` URI, the skill extracts the `secret=` value and generates the current six-digit code from that secret.
 ```
 
 ```text
@@ -208,7 +218,11 @@ If `openvpn` is not on `PATH`, set `OPENVPN_BIN=~/path/to/openvpn` in `~/.openvp
 ```
 
 ```powershell
-dashboard openvpn.setup -u alice -p 'secret-password' -2fa 'otpauth://totp/DD?secret=JBSWY3DPEHPK3PXP'
+dashboard openvpn.setup -u alice -p 'secret-password' -2fa 'otpauth://totp/DD?secret=JBSWY3DPEHPK3PXP' -c '~/openvpn/config/company.ovpn'
+```
+
+```text
+On Windows, place the `.ovpn` profile under `~/openvpn/config/` and let the skill write its auth and pid helpers under `~/openvpn/config/dd-runtime`.
 ```
 
 ```text
@@ -220,3 +234,4 @@ If reconnect fails five times in a row, the collector disables reconnect and lea
 - `docs/overview.md`
 - `docs/usage.md`
 - `docs/changes/2026-05-01-initial-release.md`
+- `docs/changes/2026-05-05-windows-autologin-layout.md`

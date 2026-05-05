@@ -26,6 +26,9 @@ sub new {
 sub run_dir {
     my ($self) = @_;
     return $self->{run_dir} if defined $self->{run_dir};
+    if ( $self->is_windows ) {
+        return File::Spec->catdir( $self->{home}, 'openvpn', 'config', 'dd-runtime' );
+    }
     return File::Spec->catdir( $self->{home}, '.openvpn-dd' );
 }
 
@@ -72,6 +75,7 @@ sub start {
         '--writepid', $self->pid_file,
         '--log',      $self->log_file,
         '--auth-user-pass', $auth_file,
+        '--auth-retry', 'nointeract',
         '--config',   $config,
         '--auth-nocache',
     );

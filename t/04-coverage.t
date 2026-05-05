@@ -21,13 +21,18 @@ use OpenVPN::Manager;
 
 {
     my $home = tempdir( CLEANUP => 1 );
+    make_path( File::Spec->catdir( $home, 'openvpn', 'config' ) );
+    my $preferred = File::Spec->catfile( $home, 'openvpn', 'config', 'client.ovpn' );
+    open my $pfh, '>', $preferred or die $!;
+    print {$pfh} "client\n";
+    close $pfh or die $!;
     make_path( File::Spec->catdir( $home, '.config', 'openvpn' ) );
     my $ovpn = File::Spec->catfile( $home, '.config', 'openvpn', 'client.ovpn' );
     open my $fh, '>', $ovpn or die $!;
     print {$fh} "client\n";
     close $fh or die $!;
     my $manager = OpenVPN::Manager->new( home => $home, interactive => 0, system => sub { return 0 } );
-    is( $manager->find_openvpn_config, $ovpn, 'config finder discovers fallback ovpn files' );
+    is( $manager->find_openvpn_config, $preferred, 'config finder discovers the ~/openvpn/config layout before the older fallback paths' );
 }
 
 {
@@ -57,6 +62,16 @@ use OpenVPN::Manager;
     is( $manager->result_exit_code($result), 0, 'connected results map to zero exit' );
     $result->{connected} = JSON::PP::false;
     is( $manager->result_exit_code($result), 1, 'disconnected results map to nonzero exit' );
+}
+
+{
+    my $home = tempdir( CLEANUP => 1 );
+    my $manager = OpenVPN::Manager->new( home => $home, osname => 'MSWin32', interactive => 0, system => sub { return 0 } );
+    is(
+        $manager->run_dir,
+        File::Spec->catdir( $home, 'openvpn', 'config', 'dd-runtime' ),
+        'manager uses the Windows-oriented runtime directory under ~/openvpn/config'
+    );
 }
 
 done_testing;

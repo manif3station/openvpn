@@ -61,10 +61,10 @@ sub manager_for {
         sleep => sub { return 1 },
     );
     $manager->write_env_file(
-        {
-            OPENVPN_USERNAME => 'alice',
-            OPENVPN_PASSWORD => 'secret',
-            OPENVPN_2FA      => 'JBSWY3DPEHPK3PXP',
+        $args{env_values} || {
+            USERNAME => 'alice',
+            PASSWORD => 'secret',
+            MFA      => 'JBSWY3DPEHPK3PXP',
         }
     ) if $args{with_env};
     return ( $manager, $home, $state );
@@ -90,6 +90,26 @@ sub manager_for {
     chomp @lines;
     is( $lines[0], 'alice', 'auth file keeps username on the first line' );
     like( $lines[1], qr/^secret\d{6}\z/, 'auth file appends a generated six digit code to the password' );
+}
+
+{
+    my ( $manager, $home ) = manager_for(
+        with_env    => 1,
+        env_values  => {
+            OPENVPN_USERNAME => 'legacy-alice',
+            OPENVPN_PASSWORD => 'legacy-secret',
+            OPENVPN_2FA      => '123456',
+            OPENVPN_CONFIG   => '~/openvpn/config/client.ovpn',
+        },
+    );
+    my $result = $manager->execute_connect('--auto');
+    is( $result->{status}, 'connected', 'connect still accepts legacy env keys' );
+    open my $fh, '<', $manager->auth_file or die $!;
+    my @lines = <$fh>;
+    close $fh or die $!;
+    chomp @lines;
+    is( $lines[0], 'legacy-alice', 'legacy username is normalized during auth file generation' );
+    is( $lines[1], 'legacy-secret123456', 'legacy password and static legacy MFA are normalized during auth file generation' );
 }
 
 {

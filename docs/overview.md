@@ -8,16 +8,18 @@ The skill-owned Perl modules handle the credential, TOTP, state, and process-man
 
 The main behavior is:
 
-- `dashboard openvpn.setup` records the username, password, and optional 2FA secret in `~/.openvpn.env`
+- `dashboard openvpn.setup` records the username, password, optional 2FA secret, and optional config path in `~/.openvpn.env`
 - `dashboard openvpn.setup` accepts a six-digit suffix, a raw TOTP Base32 secret, or an `otpauth://` URI for the 2FA value
+- the canonical env keys are `USERNAME`, `PASSWORD`, `MFA`, and `CONFIG`, while `OPENVPN_*` keys remain readable for backward compatibility
 - `dashboard openvpn.connect` performs one connection attempt and leaves reconnect disabled afterward
 - `dashboard openvpn.connect --auto` performs a connection attempt and enables managed reconnect
 - `dashboard openvpn.connect --collector` is the collector path that reports indicator state and retries reconnect when allowed
 - `dashboard openvpn.noreconnect` disables reconnect without tearing down the current process
 - `dashboard openvpn.disconnect` disconnects and disables reconnect
+- the launcher starts OpenVPN with `--auth-retry nointeract` so the managed CLI path keeps using the generated auth file instead of surfacing another login dialog
 
 The collector indicator starts as `OVPN?` before setup is complete. That produces a red DD indicator state on purpose so the user sees that the skill is not ready yet.
 
 Once setup is complete, the collector watches the managed OpenVPN process state and reconnects after disconnect when auto reconnect is enabled. After five failed reconnect attempts, it disables reconnect and returns an alert state until the user investigates and runs `dashboard openvpn.connect --auto` again.
 
-On Windows 11 PowerShell, the launcher switches to Windows-aware process start, pid inspection, and task termination behavior, and it falls back to a visible prompt for hidden-password questions.
+On Windows 11 PowerShell, the launcher switches to Windows-aware process start, pid inspection, and task termination behavior, falls back to a visible prompt for hidden-password questions, and keeps its runtime helpers under `~/openvpn/config/dd-runtime`.

@@ -34,9 +34,9 @@ use OpenVPN::Manager;
     open my $fh, '<', File::Spec->catfile( $home, '.openvpn.env' ) or die $!;
     my $content = do { local $/; <$fh> };
     close $fh or die $!;
-    like( $content, qr/^OPENVPN_USERNAME=alice$/m, 'env file stores username' );
-    like( $content, qr/^OPENVPN_PASSWORD=secret-pass$/m, 'env file stores password' );
-    like( $content, qr/^OPENVPN_2FA=TOTPSECRET$/m, 'env file stores 2fa token' );
+    like( $content, qr/^USERNAME=alice$/m, 'env file stores username using the short Windows-friendly key' );
+    like( $content, qr/^PASSWORD=secret-pass$/m, 'env file stores password using the short Windows-friendly key' );
+    like( $content, qr/^MFA=TOTPSECRET$/m, 'env file stores 2fa token using the short Windows-friendly key' );
 }
 
 {
@@ -52,6 +52,48 @@ use OpenVPN::Manager;
     my $result = $manager->execute_setup( '-u', 'bob', '-p', 's3cret', '-2fa', '123456' );
     is( $result->{username}, 'bob', 'argument-driven setup stores username' );
     is( $result->{two_factor}, 'static', 'six digit 2fa is marked as static' );
+}
+
+{
+    my $home = tempdir( CLEANUP => 1 );
+    my $stdout = q{};
+    open my $out, '>', \$stdout or die $!;
+    my $manager = OpenVPN::Manager->new(
+        home        => $home,
+        stdout_fh   => $out,
+        interactive => 0,
+        system      => sub { return 0 },
+    );
+    my $result = $manager->execute_setup(
+        '-u', 'carol',
+        '-p', 's3cret',
+        '-2fa', '654321',
+        '-c', '~/openvpn/config/work.ovpn',
+    );
+    is( $result->{config_candidate}, '~/openvpn/config/work.ovpn', 'setup returns the saved config path when one is provided explicitly' );
+
+    open my $fh, '<', File::Spec->catfile( $home, '.openvpn.env' ) or die $!;
+    my $content = do { local $/; <$fh> };
+    close $fh or die $!;
+    like( $content, qr/^CONFIG=~\/openvpn\/config\/work\.ovpn$/m, 'env file stores the short config key' );
+}
+
+{
+    my $home = tempdir( CLEANUP => 1 );
+    open my $fh, '>', File::Spec->catfile( $home, '.openvpn.env' ) or die $!;
+    print {$fh} "OPENVPN_USERNAME=legacy-user\nOPENVPN_PASSWORD=legacy-pass\nOPENVPN_2FA=LEGACYTOTP\nOPENVPN_CONFIG=~/openvpn/config/legacy.ovpn\n";
+    close $fh or die $!;
+
+    my $manager = OpenVPN::Manager->new(
+        home        => $home,
+        interactive => 0,
+        system      => sub { return 0 },
+    );
+    my $env = $manager->read_env_file;
+    is( $env->{USERNAME}, 'legacy-user', 'legacy username key is normalized to USERNAME' );
+    is( $env->{PASSWORD}, 'legacy-pass', 'legacy password key is normalized to PASSWORD' );
+    is( $env->{MFA}, 'LEGACYTOTP', 'legacy 2fa key is normalized to MFA' );
+    is( $env->{CONFIG}, '~/openvpn/config/legacy.ovpn', 'legacy config key is normalized to CONFIG' );
 }
 
 {

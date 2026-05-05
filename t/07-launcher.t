@@ -13,7 +13,12 @@ use OpenVPN::Launcher;
 sub fake_launcher {
     my (%args) = @_;
     my $home = tempdir( CLEANUP => 1 );
-    my $run  = File::Spec->catdir( $home, '.openvpn-dd' );
+    my $osname = $args{osname} || 'linux';
+    my $run  = exists $args{run_dir}
+        ? $args{run_dir}
+        : $osname eq 'MSWin32'
+            ? File::Spec->catdir( $home, 'openvpn', 'config', 'dd-runtime' )
+            : File::Spec->catdir( $home, '.openvpn-dd' );
     make_path($run);
 
     my $state = {
@@ -24,7 +29,7 @@ sub fake_launcher {
     my $launcher = OpenVPN::Launcher->new(
         home        => $home,
         run_dir     => $run,
-        osname      => $args{osname} || 'linux',
+        osname      => $osname,
         openvpn_bin => $args{openvpn_bin},
         env         => $args{env} || {},
         system      => $args{system} || sub {
@@ -100,12 +105,17 @@ sub fake_launcher {
 }
 
 {
-    my ( $launcher ) = fake_launcher(
+    my ( $launcher, $home ) = fake_launcher(
         osname      => 'MSWin32',
         openvpn_bin => undef,
         env         => { ProgramFiles => 'C:/Program Files' },
     );
     is( $launcher->openvpn_bin({}), 'openvpn.exe', 'launcher falls back to openvpn.exe on Windows when no explicit path exists' );
+    is(
+        $launcher->run_dir,
+        File::Spec->catdir( $home, 'openvpn', 'config', 'dd-runtime' ),
+        'launcher uses the Windows-oriented runtime directory under ~/openvpn/config'
+    );
 }
 
 {
@@ -121,6 +131,16 @@ sub fake_launcher {
 }
 
 {
+    my $home = tempdir( CLEANUP => 1 );
+    my $launcher = OpenVPN::Launcher->new( home => $home, osname => 'MSWin32', env => {} );
+    is(
+        $launcher->run_dir,
+        File::Spec->catdir( $home, 'openvpn', 'config', 'dd-runtime' ),
+        'launcher default run_dir uses the Windows-oriented runtime directory when no explicit run_dir is supplied'
+    );
+}
+
+{
     is(
         OpenVPN::Launcher->_spawn_dispatch( 'MSWin32', sub { my ( $mode, @cmd ) = @_; return $mode == 1 ? 6789 : 0 }, 'openvpn.exe' ),
         6789,
@@ -132,6 +152,32 @@ sub fake_launcher {
     ok(
         OpenVPN::Launcher->_spawn_windows( undef, 'perl', '-e', 'exit 0' ) > 0,
         'launcher Windows spawn falls back to the Perl-managed async spawn path when no native callback is supplied'
+    );
+}
+
+{
+    my @seen;
+    my ( $launcher ) = fake_launcher(
+        osname  => 'MSWin32',
+        spawner => sub {
+            my (@cmd) = @_;
+            @seen = @cmd;
+            return 3001;
+        },
+        capture => sub {
+            my ($cmd) = @_;
+            return $cmd =~ /^tasklist / ? "openvpn.exe 3001\n" : q{};
+        }
+    );
+    $launcher->start(
+        env       => {},
+        config    => '/tmp/config.ovpn',
+        auth_file => '/tmp/auth.txt',
+    );
+    is_deeply(
+        [ grep { $_ eq '--auth-retry' || $_ eq 'nointeract' } @seen ],
+        [ '--auth-retry', 'nointeract' ],
+        'launcher starts OpenVPN in no-interactive-auth mode'
     );
 }
 

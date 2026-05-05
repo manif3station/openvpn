@@ -1,5 +1,12 @@
 Revision history for openvpn
 
+0.05 2026-05-05
+    - added the short `USERNAME`, `PASSWORD`, `MFA`, and `CONFIG` env contract while keeping legacy `OPENVPN_*` keys readable
+    - added `-c` and `--config` to `dashboard openvpn.setup`
+    - promoted `~/openvpn/config/` to a first-class config discovery location
+    - moved the default Windows runtime helper directory to `~/openvpn/config/dd-runtime`
+    - started OpenVPN with `--auth-retry nointeract` so the managed CLI path does not reopen username/password prompts
+
 0.04 2026-05-01
     - expanded `cpanfile` so it explicitly records the core Perl modules used by the skill and names the skill-local modules separately
 

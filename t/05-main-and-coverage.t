@@ -251,6 +251,25 @@ sub fake_manager {
 
 {
     my $home = tempdir( CLEANUP => 1 );
+    my $config_dir = File::Spec->catdir( $home, 'openvpn', 'config' );
+    make_path($config_dir);
+    my $config = File::Spec->catfile( $config_dir, 'home.ovpn' );
+    open my $fh, '>', $config or die $!;
+    print {$fh} "client\n";
+    close $fh or die $!;
+    my $manager = OpenVPN::Manager->new( home => $home, interactive => 0 );
+    $manager->write_env_file(
+        {
+            USERNAME => 'alice',
+            PASSWORD => 'secret',
+            CONFIG   => '~/openvpn/config/home.ovpn',
+        }
+    );
+    like( $manager->resolved_openvpn_config, qr/home\.ovpn$/, 'resolved_openvpn_config accepts the short CONFIG env key' );
+}
+
+{
+    my $home = tempdir( CLEANUP => 1 );
     my $pf   = File::Spec->catdir( $home, 'ProgramFiles' );
     my $cfgd = File::Spec->catdir( $pf, 'OpenVPN', 'config' );
     make_path($cfgd);
@@ -265,6 +284,22 @@ sub fake_manager {
         interactive => 0,
     );
     is( $manager->find_openvpn_config, $cfg, 'Windows config discovery checks Program Files OpenVPN config paths' );
+}
+
+{
+    my $home = tempdir( CLEANUP => 1 );
+    my $config_dir = File::Spec->catdir( $home, 'openvpn', 'config' );
+    make_path($config_dir);
+    my $config = File::Spec->catfile( $config_dir, 'windows-home.ovpn' );
+    open my $fh, '>', $config or die $!;
+    print {$fh} "client\n";
+    close $fh or die $!;
+    my $manager = OpenVPN::Manager->new(
+        home        => $home,
+        osname      => 'MSWin32',
+        interactive => 0,
+    );
+    is( $manager->find_openvpn_config, $config, 'Windows config discovery checks ~/openvpn/config before other directories' );
 }
 
 {

@@ -92,9 +92,10 @@ sub execute_setup {
     $self->ensure_runtime_dir;
 
     my $existing = $self->read_env_file;
-    my $username = defined $opt->{username} ? $opt->{username} : $existing->{OPENVPN_USERNAME};
-    my $password = defined $opt->{password} ? $opt->{password} : $existing->{OPENVPN_PASSWORD};
-    my $twofa    = defined $opt->{twofa}    ? $opt->{twofa}    : $existing->{OPENVPN_2FA};
+    my $username = defined $opt->{username} ? $opt->{username} : $existing->{USERNAME};
+    my $password = defined $opt->{password} ? $opt->{password} : $existing->{PASSWORD};
+    my $twofa    = defined $opt->{twofa}    ? $opt->{twofa}    : $existing->{MFA};
+    my $config   = defined $opt->{config}   ? $opt->{config}   : $existing->{CONFIG};
 
     $username = $self->prompt_visible('OpenVPN username: ') if !defined $username || $username eq q{};
     $password = $self->prompt_hidden('OpenVPN password: ')  if !defined $password || $password eq q{};
@@ -106,14 +107,20 @@ sub execute_setup {
 
     my %merged = (
         %{$existing},
-        OPENVPN_USERNAME => $username,
-        OPENVPN_PASSWORD => $password,
+        USERNAME => $username,
+        PASSWORD => $password,
     );
     if ( $twofa ne q{} ) {
-        $merged{OPENVPN_2FA} = $twofa;
+        $merged{MFA} = $twofa;
     }
     else {
-        delete $merged{OPENVPN_2FA};
+        delete $merged{MFA};
+    }
+    if ( defined $config && $config ne q{} ) {
+        $merged{CONFIG} = $config;
+    }
+    else {
+        delete $merged{CONFIG};
     }
 
     $self->write_env_file( \%merged );
@@ -131,7 +138,7 @@ sub execute_setup {
         username         => $username,
         two_factor       => $twofa eq q{} ? 'disabled' : $self->twofa_mode($twofa),
         auto_reconnect   => JSON::PP::true,
-        config_candidate => $self->find_openvpn_config || q{},
+        config_candidate => defined $config && $config ne q{} ? $config : $self->find_openvpn_config || q{},
     };
 }
 
@@ -291,6 +298,11 @@ sub parse_setup_args {
             $opt{twofa} = shift @argv;
             next;
         }
+        if ( $arg eq '-c' || $arg eq '--config' ) {
+            die "Missing value after $arg\n" if !@argv;
+            $opt{config} = shift @argv;
+            next;
+        }
         die "Unsupported option: $arg\n";
     }
     return \%opt;
@@ -348,6 +360,9 @@ sub ensure_runtime_dir {
 sub run_dir {
     my ($self) = @_;
     return $self->{run_dir} if defined $self->{run_dir};
+    if ( $self->{osname} eq 'MSWin32' ) {
+        return File::Spec->catdir( $self->{home}, 'openvpn', 'config', 'dd-runtime' );
+    }
     return File::Spec->catdir( $self->{home}, '.openvpn-dd' );
 }
 
@@ -392,6 +407,10 @@ sub read_env_file {
         $env{$key} = $value;
     }
     close $fh or die "Unable to close $path: $!";
+    $env{USERNAME} ||= delete $env{OPENVPN_USERNAME} if exists $env{OPENVPN_USERNAME};
+    $env{PASSWORD} ||= delete $env{OPENVPN_PASSWORD} if exists $env{OPENVPN_PASSWORD};
+    $env{MFA}      ||= delete $env{OPENVPN_2FA}      if exists $env{OPENVPN_2FA};
+    $env{CONFIG}   ||= delete $env{OPENVPN_CONFIG}   if exists $env{OPENVPN_CONFIG};
     return \%env;
 }
 
@@ -436,18 +455,18 @@ sub write_state {
 
 sub is_setup_complete {
     my ( $self, $env ) = @_;
-    return 0 if !defined $env->{OPENVPN_USERNAME} || $env->{OPENVPN_USERNAME} eq q{};
-    return 0 if !defined $env->{OPENVPN_PASSWORD} || $env->{OPENVPN_PASSWORD} eq q{};
+    return 0 if !defined $env->{USERNAME} || $env->{USERNAME} eq q{};
+    return 0 if !defined $env->{PASSWORD} || $env->{PASSWORD} eq q{};
     return 1;
 }
 
 sub resolved_openvpn_config {
     my ( $self, $env ) = @_;
     $env ||= $self->read_env_file;
-    my $from_env = $self->{env}{OPENVPN_CONFIG} || $env->{OPENVPN_CONFIG} || q{};
+    my $from_env = $self->{env}{CONFIG} || $self->{env}{OPENVPN_CONFIG} || $env->{CONFIG} || q{};
     return $from_env if $from_env ne q{} && -f $self->expand_tilde($from_env);
     my $candidate = $self->find_openvpn_config;
-    die "OpenVPN config file not found. Set OPENVPN_CONFIG in ~/.openvpn.env or place one .ovpn file under ~/.openvpn or ~/.config/openvpn\n"
+    die "OpenVPN config file not found. Set CONFIG in ~/.openvpn.env or place one .ovpn file under ~/openvpn/config, ~/.openvpn, or ~/.config/openvpn\n"
       if !defined $candidate || $candidate eq q{};
     return $candidate;
 }
@@ -483,11 +502,11 @@ sub start_connection {
 sub write_auth_file {
     my ( $self, $env ) = @_;
     my $path = $self->auth_file;
-    my $password = $env->{OPENVPN_PASSWORD};
-    my $token = $env->{OPENVPN_2FA} || q{};
+    my $password = $env->{PASSWORD};
+    my $token = $env->{MFA} || q{};
     $password .= $self->current_twofa_code($token) if $token ne q{};
     open my $fh, '>', $path or die "Unable to write $path: $!";
-    print {$fh} "$env->{OPENVPN_USERNAME}\n$password\n";
+    print {$fh} "$env->{USERNAME}\n$password\n";
     close $fh or die "Unable to close $path: $!";
     chmod 0600, $path;
     return $path;
@@ -604,6 +623,8 @@ sub default_config_candidates {
     my ($self) = @_;
     if ( $self->{osname} eq 'MSWin32' ) {
         return (
+            File::Spec->catfile( $self->{home}, 'openvpn', 'config', 'client.ovpn' ),
+            File::Spec->catfile( $self->{home}, 'openvpn', 'config', 'config.ovpn' ),
             File::Spec->catfile( $self->{home}, 'OpenVPN', 'config', 'client.ovpn' ),
             File::Spec->catfile( $self->{home}, 'OpenVPN', 'config', 'config.ovpn' ),
             File::Spec->catfile( $self->{home}, 'config', 'openvpn', 'client.ovpn' ),
@@ -621,6 +642,8 @@ sub default_config_candidates {
     }
 
     return (
+        '~/openvpn/config/client.ovpn',
+        '~/openvpn/config/config.ovpn',
         '~/.openvpn/config.ovpn',
         '~/.openvpn/client.ovpn',
         '~/.config/openvpn/client.ovpn',
@@ -632,6 +655,7 @@ sub default_config_search_dirs {
     my ($self) = @_;
     if ( $self->{osname} eq 'MSWin32' ) {
         return (
+            File::Spec->catdir( $self->{home}, 'openvpn', 'config' ),
             File::Spec->catdir( $self->{home}, 'OpenVPN', 'config' ),
             File::Spec->catdir( $self->{home}, 'config', 'openvpn' ),
             map {
@@ -640,7 +664,7 @@ sub default_config_search_dirs {
             } qw(ProgramFiles ProgramFiles(x86))
         );
     }
-    return map { $self->expand_tilde($_) } qw(~/.openvpn ~/.config/openvpn);
+    return map { $self->expand_tilde($_) } qw(~/openvpn/config ~/.openvpn ~/.config/openvpn);
 }
 
 sub launcher {

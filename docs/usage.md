@@ -46,7 +46,7 @@ dashboard openvpn.setup
 Promptless setup:
 
 ```bash
-dashboard openvpn.setup -u alice -p 'secret-password' -2fa JBSWY3DPEHPK3PXP
+dashboard openvpn.setup -u alice -p 'secret-password' -2fa JBSWY3DPEHPK3PXP -c '~/openvpn/config/work.ovpn'
 ```
 
 The skill writes:
@@ -62,6 +62,25 @@ OPENVPN_BIN=~/path/to/openvpn
 ```
 
 On Windows 11 PowerShell, `OPENVPN_BIN` will usually point at an `openvpn.exe` path.
+
+The canonical setup file keys are:
+
+```text
+USERNAME=alice
+PASSWORD=secret-password
+MFA=JBSWY3DPEHPK3PXP
+CONFIG=~/openvpn/config/work.ovpn
+OPENVPN_BIN=~/path/to/openvpn
+```
+
+The skill still reads legacy keys:
+
+```text
+OPENVPN_USERNAME=alice
+OPENVPN_PASSWORD=secret-password
+OPENVPN_2FA=JBSWY3DPEHPK3PXP
+OPENVPN_CONFIG=~/openvpn/config/work.ovpn
+```
 
 ## Connection Commands
 
@@ -123,8 +142,10 @@ If you want a different interval or icon, override that collector in:
 
 ## Config Discovery
 
-If `OPENVPN_CONFIG` is not present in `~/.openvpn.env`, the skill tries these paths:
+If `CONFIG` is not present in `~/.openvpn.env`, the skill tries these paths:
 
+- `~/openvpn/config/client.ovpn`
+- `~/openvpn/config/config.ovpn`
 - `~/.openvpn/config.ovpn`
 - `~/.openvpn/client.ovpn`
 - `~/.config/openvpn/client.ovpn`
@@ -132,12 +153,19 @@ If `OPENVPN_CONFIG` is not present in `~/.openvpn.env`, the skill tries these pa
 - the first `*.ovpn` file under `~/.openvpn/`
 - the first `*.ovpn` file under `~/.config/openvpn/`
 
+On Windows, the skill also keeps its managed auth, pid, and log files under:
+
+```text
+~/openvpn/config/dd-runtime
+```
+
 ## Practical Notes
 
-- use a six-digit `OPENVPN_2FA` only if your VPN actually expects a fixed suffix
-- use a non-six-digit `OPENVPN_2FA` value for a TOTP secret so the skill can generate the current six-digit code
-- use an `otpauth://` URI in `OPENVPN_2FA` if that is how your VPN team shares the TOTP secret
+- use a six-digit `MFA` only if your VPN actually expects a fixed suffix
+- use a non-six-digit `MFA` value for a TOTP secret so the skill can generate the current six-digit code
+- use an `otpauth://` URI in `MFA` if that is how your VPN team shares the TOTP secret
 - the skill does not install `openvpn` for you; keep your existing host install or set `OPENVPN_BIN`
 - on Windows 11 PowerShell, hidden password prompts fall back to visible prompts, so use non-interactive setup if you want to avoid typing secrets on screen
+- the launcher uses `--auth-retry nointeract` so the managed CLI path keeps using the generated auth file instead of surfacing a separate username/password login box
 - use `dashboard openvpn.connect --auto` after a five-failure lockout to re-enable reconnect attempts
 - use `dashboard openvpn.connect` if you want one connection attempt without turning reconnect back on
