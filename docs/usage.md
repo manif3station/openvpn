@@ -68,6 +68,12 @@ That produces these on-demand build outputs:
 
 The repository does not keep those generated binaries in Git.
 
+If `connect` fails, inspect:
+
+- the JSON `message`
+- the JSON `log_file`
+- the referenced OpenVPN log content
+
 ## Setup
 
 Interactive:
@@ -116,6 +122,10 @@ OPENVPN_CONFIG=~/openvpn/config/work.ovpn
 ```
 
 The standalone Go mirror reads the same setup file and key names.
+
+The stored `MFA` value stays as the raw secret or static suffix in `~/.openvpn.env`.
+
+At runtime, the Go mirror writes a helper auth file under `~/openvpn/config/dd-runtime/auth.txt` on Windows or `~/.openvpn-dd/auth.txt` on Linux and macOS. That file contains the generated current code for the active connect attempt only.
 
 ## Connection Commands
 

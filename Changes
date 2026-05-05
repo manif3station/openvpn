@@ -1,5 +1,11 @@
 Revision history for openvpn
 
+0.07 2026-05-05
+    - kept the raw `MFA` secret or static suffix in `~/.openvpn.env` and clarified that `auth.txt` stores the generated current code for the current connect attempt only
+    - improved the standalone Go Windows launcher so it waits for the managed OpenVPN process and accepts a live spawned pid when the pid file is delayed
+    - added `log_file` to the Go mirror JSON payload and included log-path context in Windows connect failure messages
+    - reverified the standalone Go mirror in Docker at `100.0%` statement coverage after the Windows connect fix
+
 0.06 2026-05-05
     - added `go-version/` as a standalone Go mirror for `setup`, `connect`, `disconnect`, and `noreconnect`
     - kept the Go mirror source-only in the repository while documenting build scripts that produce the Windows command-shaped executables on demand

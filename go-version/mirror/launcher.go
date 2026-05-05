@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -101,15 +102,29 @@ func (l *DefaultLauncher) Start(env map[string]string, configPath, authPath stri
 	if l.isWindows() {
 		pid, err := l.StartProcess(l.OpenVPNBin(env), cmd...)
 		if err != nil {
-			return 0, errors.New("openvpn failed to spawn on Windows")
+			return 0, l.withLogContext("openvpn failed to spawn on Windows")
 		}
 		if pid == 0 {
-			return 0, errors.New("openvpn failed to spawn on Windows")
+			return 0, l.withLogContext("openvpn failed to spawn on Windows")
 		}
-		if !fileExists(l.PIDFile()) {
-			if err := os.WriteFile(l.PIDFile(), []byte(fmt.Sprintf("%d\n", pid)), 0o600); err != nil {
-				return 0, err
+		for range 10 {
+			pidFilePID := l.CurrentPID()
+			if pidFilePID != 0 && l.PIDAlive(pidFilePID) {
+				return pidFilePID, nil
 			}
+			if l.PIDAlive(pid) {
+				l.Sleep(time.Second)
+				continue
+			}
+			break
+		}
+		if l.PIDAlive(pid) {
+			if !fileExists(l.PIDFile()) {
+				if err := os.WriteFile(l.PIDFile(), []byte(fmt.Sprintf("%d\n", pid)), 0o600); err != nil {
+					return 0, err
+				}
+			}
+			return pid, nil
 		}
 	} else {
 		rc, err := l.RunCommand(l.OpenVPNBin(env), append([]string{"--daemon"}, cmd...)...)
@@ -124,10 +139,10 @@ func (l *DefaultLauncher) Start(env map[string]string, configPath, authPath stri
 	l.Sleep(time.Second)
 	pid := l.CurrentPID()
 	if pid == 0 {
-		return 0, errors.New("OpenVPN did not create a pid file")
+		return 0, l.withLogContext("OpenVPN did not create a pid file")
 	}
 	if !l.PIDAlive(pid) {
-		return 0, errors.New("OpenVPN process is not running after connect attempt")
+		return 0, l.withLogContext("OpenVPN process is not running after connect attempt")
 	}
 	return pid, nil
 }
@@ -237,6 +252,19 @@ func (l *DefaultLauncher) defaultTerminatePID(pid int) error {
 func runSimple(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	return cmd.Run()
+}
+
+func (l *DefaultLauncher) withLogContext(message string) error {
+	logPath := l.LogFile()
+	data, err := os.ReadFile(logPath)
+	if err != nil || len(data) == 0 {
+		return fmt.Errorf("%s (see %s)", message, logPath)
+	}
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) > 3 {
+		lines = lines[len(lines)-3:]
+	}
+	return fmt.Errorf("%s (see %s: %s)", message, logPath, strings.Join(lines, " | "))
 }
 
 var _ = runtime.GOOS

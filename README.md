@@ -71,7 +71,7 @@ This skill expects an existing `openvpn` executable on the machine or an explici
 
 The skill does not try to install `openvpn` through `apt` or Homebrew.
 
-The skill ships a [cpanfile](/home/mv/projects/skills/skills/openvpn/cpanfile) so the dependency gate stays explicit. At `0.06`, it records the core Perl modules the skill relies on and also names the skill-local modules used by the implementation.
+The skill ships a [cpanfile](/home/mv/projects/skills/skills/openvpn/cpanfile) so the dependency gate stays explicit. At `0.07`, it records the core Perl modules the skill relies on and also names the skill-local modules used by the implementation.
 
 For the standalone mirror, `go-version/` ships:
 
@@ -151,6 +151,8 @@ Use the built Windows mirror:
 ./cli/disconnect.exe
 ```
 
+If a Go mirror connect fails on Windows, the JSON now includes `log_file`, and the `message` includes the OpenVPN log path and the latest log context.
+
 ## Setup File
 
 The skill stores user-managed values in:
@@ -166,6 +168,13 @@ Supported variables:
 - `MFA`
 - `CONFIG`
 - `OPENVPN_BIN`
+
+`MFA` stores the raw six-digit suffix or raw TOTP secret in `~/.openvpn.env`.
+
+The generated runtime helper file `auth.txt` stores only the current connect attempt values:
+
+- line 1: `USERNAME`
+- line 2: `PASSWORD` plus the current six-digit MFA code
 
 Legacy compatibility keys are still accepted on read:
 
@@ -274,3 +283,4 @@ If reconnect fails five times in a row, the collector disables reconnect and lea
 - `docs/changes/2026-05-01-initial-release.md`
 - `docs/changes/2026-05-05-windows-autologin-layout.md`
 - `docs/changes/2026-05-05-go-mirror.md`
+- `docs/changes/2026-05-05-windows-go-connect-fix.md`

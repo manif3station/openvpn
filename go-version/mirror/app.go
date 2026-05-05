@@ -56,6 +56,7 @@ type Result struct {
 	EnvFile       string `json:"env_file"`
 	StateFile     string `json:"state_file"`
 	PIDFile       string `json:"pid_file"`
+	LogFile       string `json:"log_file"`
 	Config        string `json:"config"`
 	Message       string `json:"message"`
 	PID           int    `json:"pid"`
@@ -710,6 +711,7 @@ func (a *App) statusResult(mode, status, icon string, connected, autoReconnect b
 		EnvFile:       a.EnvFile(),
 		StateFile:     a.StateFile(),
 		PIDFile:       a.PIDFile(),
+		LogFile:       a.LogFile(),
 		Config:        config,
 		Message:       message,
 		PID:           pid,

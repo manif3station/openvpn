@@ -31,6 +31,8 @@ Supported keys:
 - `CONFIG`
 - `OPENVPN_BIN`
 
+`MFA` stays stored as the raw six-digit suffix or raw TOTP secret in `~/.openvpn.env`.
+
 Legacy compatibility keys are still accepted on read:
 
 - `OPENVPN_USERNAME`
@@ -81,3 +83,7 @@ Built Windows mirror form:
 ./cli/noreconnect.exe
 ./cli/disconnect.exe
 ```
+
+The generated runtime helper `auth.txt` contains the current connect-attempt password line with the active MFA code appended. It is not the stored source of truth for the MFA secret.
+
+If `connect` fails, inspect the JSON `message` and `log_file` fields, then open the referenced OpenVPN log.

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -124,7 +125,7 @@ func TestDefaultLauncherStartFailuresAndWindows(t *testing.T) {
 		return 0, nil
 	}
 	l.ProbePID = func(pid int) bool { return false }
-	if _, err := l.Start(map[string]string{}, "/tmp/config.ovpn", "/tmp/auth.txt"); err == nil || err.Error() != "OpenVPN did not create a pid file" {
+	if _, err := l.Start(map[string]string{}, "/tmp/config.ovpn", "/tmp/auth.txt"); err == nil || !strings.Contains(err.Error(), "OpenVPN did not create a pid file") {
 		t.Fatalf("expected missing pid file error, got %v", err)
 	}
 	l.RunCommand = func(name string, args ...string) (int, error) {
@@ -136,7 +137,7 @@ func TestDefaultLauncherStartFailuresAndWindows(t *testing.T) {
 		}
 		return 0, nil
 	}
-	if _, err := l.Start(map[string]string{}, "/tmp/config.ovpn", "/tmp/auth.txt"); err == nil || err.Error() != "OpenVPN process is not running after connect attempt" {
+	if _, err := l.Start(map[string]string{}, "/tmp/config.ovpn", "/tmp/auth.txt"); err == nil || !strings.Contains(err.Error(), "OpenVPN process is not running after connect attempt") {
 		t.Fatalf("expected dead pid error, got %v", err)
 	}
 
@@ -187,6 +188,12 @@ func TestDefaultLauncherStartFailuresAndWindows(t *testing.T) {
 		t.Fatal(err)
 	}
 	wErr.StartProcess = func(name string, args ...string) (int, error) { return 5555, nil }
+	wErr.CaptureOutput = func(name string, args ...string) (string, error) {
+		if name == "tasklist" {
+			return "openvpn.exe 5555\n", nil
+		}
+		return "", nil
+	}
 	wErr.Sleep = func(time.Duration) {}
 	if _, err := wErr.Start(map[string]string{}, `C:\vpn\config.ovpn`, `C:\vpn\auth.txt`); err == nil {
 		t.Fatal("expected windows pid write error")
@@ -208,8 +215,29 @@ func TestDefaultLauncherStartFailuresAndWindows(t *testing.T) {
 	}
 	w4.StartProcess = func(name string, args ...string) (int, error) { return 2222, nil }
 	w4.Sleep = func(time.Duration) {}
-	if _, err := w4.Start(map[string]string{}, `C:\vpn\config.ovpn`, `C:\vpn\auth.txt`); err == nil || err.Error() != "OpenVPN process is not running after connect attempt" {
+	if _, err := w4.Start(map[string]string{}, `C:\vpn\config.ovpn`, `C:\vpn\auth.txt`); err == nil || (!strings.Contains(err.Error(), "OpenVPN process is not running after connect attempt") && !strings.Contains(err.Error(), "OpenVPN did not create a pid file")) {
 		t.Fatalf("expected windows dead pid error, got %v", err)
+	}
+
+	w5Home := t.TempDir()
+	w5 := NewDefaultLauncher(w5Home, "windows", map[string]string{}, "")
+	if err := os.MkdirAll(w5.RunDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(w5.PIDFile(), []byte("7777\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	w5.StartProcess = func(name string, args ...string) (int, error) { return 6666, nil }
+	w5.CaptureOutput = func(name string, args ...string) (string, error) {
+		if name == "tasklist" {
+			return "openvpn.exe 7777\n", nil
+		}
+		return "", nil
+	}
+	w5.Sleep = func(time.Duration) {}
+	pid, err = w5.Start(map[string]string{}, `C:\vpn\config.ovpn`, `C:\vpn\auth.txt`)
+	if err != nil || pid != 7777 {
+		t.Fatalf("expected pidfile pid success, got %d %v", pid, err)
 	}
 }
 
@@ -268,5 +296,24 @@ func TestDefaultLauncherCaptureAndPidHelpers(t *testing.T) {
 	}
 	if err := runSimple("/definitely/missing-command"); err == nil {
 		t.Fatal("expected runSimple error")
+	}
+}
+
+func TestWithLogContext(t *testing.T) {
+	home := t.TempDir()
+	l := NewDefaultLauncher(home, "linux", map[string]string{}, "")
+	if err := os.MkdirAll(l.RunDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	msg := l.withLogContext("base failure").Error()
+	if !strings.Contains(msg, "base failure") || !strings.Contains(msg, l.LogFile()) {
+		t.Fatalf("unexpected empty-log context: %s", msg)
+	}
+	if err := os.WriteFile(l.LogFile(), []byte("one\ntwo\nthree\nfour\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	msg = l.withLogContext("base failure").Error()
+	if !strings.Contains(msg, "two | three | four") {
+		t.Fatalf("unexpected tailed log context: %s", msg)
 	}
 }

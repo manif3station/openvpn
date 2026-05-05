@@ -53,5 +53,13 @@ docker run --rm -v ~/projects/skills/skills/openvpn/go-version:/work -w /work go
 - Go mirror verification:
   - Docker Go tests passed: `ok github.mf/manif3station/openvpn/go-version/mirror`
   - Docker Go coverage passed: `100.0%` statements for `github.mf/manif3station/openvpn/go-version/mirror`
+  - Docker Go Windows-style build proof passed:
+    - `./build.sh` generated `connect.exe`, `disconnect.exe`, `noreconnect.exe`, and `setup.exe`
+    - those generated files were deleted afterward so `go-version/` remained source-only
+  - Go mirror Windows launcher fix proof passed in Docker:
+    - delayed or missing pid-file paths were exercised
+    - spawned-pid fallback on Windows was exercised
+    - failure messages now include log-path context
+    - result payloads now include `log_file`
   - generated `.exe` files were not kept in `go-version/`; the repo remains source-only for the standalone mirror
   - no live `macdev` or `windev` integration proof was required for this ticket

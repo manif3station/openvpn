@@ -11,6 +11,7 @@ The skill now also ships a standalone Go mirror under `go-version/` for users wh
 The main behavior is:
 
 - `dashboard openvpn.setup` records the username, password, optional 2FA secret, and optional config path in `~/.openvpn.env`
+- the raw six-digit suffix or raw TOTP secret stays in `~/.openvpn.env` as `MFA`; only the runtime `auth.txt` helper gets the generated current code appended to the password line
 - `dashboard openvpn.setup` accepts a six-digit suffix, a raw TOTP Base32 secret, or an `otpauth://` URI for the 2FA value
 - the canonical env keys are `USERNAME`, `PASSWORD`, `MFA`, and `CONFIG`, while `OPENVPN_*` keys remain readable for backward compatibility
 - `dashboard openvpn.connect` performs one connection attempt and leaves reconnect disabled afterward
@@ -28,3 +29,5 @@ Once setup is complete, the collector watches the managed OpenVPN process state 
 On Windows 11 PowerShell, the launcher switches to Windows-aware process start, pid inspection, and task termination behavior, falls back to a visible prompt for hidden-password questions, and keeps its runtime helpers under `~/openvpn/config/dd-runtime`.
 
 The Go mirror keeps that same Windows-aware layout and also supports Linux and macOS path handling. This release proved those code paths in Docker without live `macdev` or `windev` integration runs.
+
+For Windows troubleshooting, the Go mirror also reports `log_file` in its JSON payload and includes log-path context in launcher failure messages.
