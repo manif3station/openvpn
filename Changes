@@ -1,5 +1,10 @@
 Revision history for openvpn
 
+0.08 2026-05-05
+    - moved `--config` ahead of the managed `--auth-user-pass` override in both the Perl launcher and the standalone Go mirror so profile-level `auth-user-pass` directives do not override the generated username and password helper file
+    - tightened launcher tests to prove the managed auth override is emitted after the profile path in both runtimes
+    - reran Docker functional, Perl coverage, and Go coverage gates after the Windows auth override fix
+
 0.07 2026-05-05
     - kept the raw `MFA` secret or static suffix in `~/.openvpn.env` and clarified that `auth.txt` stores the generated current code for the current connect attempt only
     - improved the standalone Go Windows launcher so it waits for the managed OpenVPN process and accepts a live spawned pid when the pid file is delayed

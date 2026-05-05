@@ -94,9 +94,9 @@ func (l *DefaultLauncher) Start(env map[string]string, configPath, authPath stri
 	cmd := []string{
 		"--writepid", l.PIDFile(),
 		"--log", l.LogFile(),
+		"--config", configPath,
 		"--auth-user-pass", authPath,
 		"--auth-retry", "nointeract",
-		"--config", configPath,
 		"--auth-nocache",
 	}
 	if l.isWindows() {

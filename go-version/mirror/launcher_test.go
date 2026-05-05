@@ -79,7 +79,14 @@ func TestDefaultLauncherStartStopUnix(t *testing.T) {
 			t.Fatal(err)
 		}
 		state[1001] = true
-		if len(args) < 9 || args[0] != "--daemon" || args[7] != "--auth-retry" || args[8] != "nointeract" {
+		if len(args) < 9 ||
+			args[0] != "--daemon" ||
+			args[5] != "--config" ||
+			args[6] != "/tmp/config.ovpn" ||
+			args[7] != "--auth-user-pass" ||
+			args[8] != "/tmp/auth.txt" ||
+			args[9] != "--auth-retry" ||
+			args[10] != "nointeract" {
 			t.Fatalf("unexpected unix args: %#v", args)
 		}
 		_ = pid
@@ -144,6 +151,13 @@ func TestDefaultLauncherStartFailuresAndWindows(t *testing.T) {
 	w := NewDefaultLauncher(home, "windows", map[string]string{}, "")
 	pids := map[int]bool{}
 	w.StartProcess = func(name string, args ...string) (int, error) {
+		if len(args) < 10 ||
+			args[4] != "--config" ||
+			args[5] != `C:\vpn\config.ovpn` ||
+			args[6] != "--auth-user-pass" ||
+			args[7] != `C:\vpn\auth.txt` {
+			t.Fatalf("unexpected windows args: %#v", args)
+		}
 		pids[4321] = true
 		return 4321, nil
 	}

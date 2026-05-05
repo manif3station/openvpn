@@ -74,9 +74,9 @@ sub start {
         $self->openvpn_bin($env),
         '--writepid', $self->pid_file,
         '--log',      $self->log_file,
+        '--config',   $config,
         '--auth-user-pass', $auth_file,
         '--auth-retry', 'nointeract',
-        '--config',   $config,
         '--auth-nocache',
     );
 

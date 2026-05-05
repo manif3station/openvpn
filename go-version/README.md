@@ -86,4 +86,6 @@ Built Windows mirror form:
 
 The generated runtime helper `auth.txt` contains the current connect-attempt password line with the active MFA code appended. It is not the stored source of truth for the MFA secret.
 
+The launcher now loads the OpenVPN profile before applying the managed `auth.txt` override so profile-level `auth-user-pass` directives do not replace the generated credentials.
+
 If `connect` fails, inspect the JSON `message` and `log_file` fields, then open the referenced OpenVPN log.

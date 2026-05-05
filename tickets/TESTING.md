@@ -53,6 +53,10 @@ docker run --rm -v ~/projects/skills/skills/openvpn/go-version:/work -w /work go
 - Go mirror verification:
   - Docker Go tests passed: `ok github.mf/manif3station/openvpn/go-version/mirror`
   - Docker Go coverage passed: `100.0%` statements for `github.mf/manif3station/openvpn/go-version/mirror`
+  - launcher invocation-order proof passed:
+    - `--config <profile>` is emitted before `--auth-user-pass <generated-auth-file>` in both runtimes
+    - the managed auth file is therefore applied after the profile path is loaded
+    - this protects the generated username and password file from profile-level `auth-user-pass` directives on Windows
   - Docker Go Windows-style build proof passed:
     - `./build.sh` generated `connect.exe`, `disconnect.exe`, `noreconnect.exe`, and `setup.exe`
     - those generated files were deleted afterward so `go-version/` remained source-only

@@ -23,6 +23,7 @@ This skill:
 - treats a six-digit `MFA` value as a static suffix
 - treats any other `MFA` value as a TOTP secret or `otpauth://` URI and generates the current six-digit code for each connection attempt
 - writes an `auth-user-pass` file on demand for OpenVPN
+- places the OpenVPN profile path before the managed `auth-user-pass` override so profile-level auth directives do not replace the generated credentials
 - starts `openvpn` with `--auth-retry nointeract` so the managed CLI path does not fall back to a username/password popup
 - monitors the tunnel through a DD collector
 - attempts reconnect automatically after disconnect when auto reconnect is enabled
@@ -71,7 +72,7 @@ This skill expects an existing `openvpn` executable on the machine or an explici
 
 The skill does not try to install `openvpn` through `apt` or Homebrew.
 
-The skill ships a [cpanfile](/home/mv/projects/skills/skills/openvpn/cpanfile) so the dependency gate stays explicit. At `0.07`, it records the core Perl modules the skill relies on and also names the skill-local modules used by the implementation.
+The skill ships a [cpanfile](/home/mv/projects/skills/skills/openvpn/cpanfile) so the dependency gate stays explicit. At `0.08`, it records the core Perl modules the skill relies on and also names the skill-local modules used by the implementation.
 
 For the standalone mirror, `go-version/` ships:
 

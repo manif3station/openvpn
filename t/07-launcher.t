@@ -174,10 +174,22 @@ sub fake_launcher {
         config    => '/tmp/config.ovpn',
         auth_file => '/tmp/auth.txt',
     );
+    my @managed_auth_window;
+    for ( my $i = 0; $i <= $#seen; $i++ ) {
+        my $item = $seen[$i];
+        if ( $item eq '--config' || $item eq '--auth-user-pass' || $item eq '--auth-retry' ) {
+            push @managed_auth_window, $item, $seen[ $i + 1 ];
+            $i++;
+        }
+    }
     is_deeply(
-        [ grep { $_ eq '--auth-retry' || $_ eq 'nointeract' } @seen ],
-        [ '--auth-retry', 'nointeract' ],
-        'launcher starts OpenVPN in no-interactive-auth mode'
+        \@managed_auth_window,
+        [
+            '--config', '/tmp/config.ovpn',
+            '--auth-user-pass', '/tmp/auth.txt',
+            '--auth-retry', 'nointeract',
+        ],
+        'launcher places the managed auth file after the profile path so it overrides profile-level auth-user-pass settings'
     );
 }
 
