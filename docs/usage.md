@@ -35,6 +35,39 @@ The manifest explicitly records:
 
 The skill-local modules `OpenVPN::Launcher` and `OpenVPN::TOTP` are documented in the same file as local implementation modules.
 
+## Standalone Go Mirror
+
+The repository also includes a source-only Go mirror in:
+
+```text
+go-version/
+```
+
+It does not need the Developer Dashboard runtime to execute.
+
+Build the Windows mirror from macOS or Linux:
+
+```bash
+cd ~/projects/skills/skills/openvpn/go-version
+./build.sh
+```
+
+Build the Windows mirror from Windows PowerShell:
+
+```powershell
+Set-Location ~/projects/skills/skills/openvpn/go-version
+./build.ps1
+```
+
+That produces these on-demand build outputs:
+
+- `cli/setup.exe`
+- `cli/connect.exe`
+- `cli/disconnect.exe`
+- `cli/noreconnect.exe`
+
+The repository does not keep those generated binaries in Git.
+
 ## Setup
 
 Interactive:
@@ -82,6 +115,8 @@ OPENVPN_2FA=JBSWY3DPEHPK3PXP
 OPENVPN_CONFIG=~/openvpn/config/work.ovpn
 ```
 
+The standalone Go mirror reads the same setup file and key names.
+
 ## Connection Commands
 
 One-off connection:
@@ -112,6 +147,16 @@ Disconnect and disable reconnect:
 
 ```bash
 dashboard openvpn.disconnect
+```
+
+Standalone Go subcommand form:
+
+```bash
+cd ~/projects/skills/skills/openvpn/go-version
+go run . setup
+go run . connect --auto
+go run . noreconnect
+go run . disconnect
 ```
 
 ## Collector Behavior
@@ -167,5 +212,6 @@ On Windows, the skill also keeps its managed auth, pid, and log files under:
 - the skill does not install `openvpn` for you; keep your existing host install or set `OPENVPN_BIN`
 - on Windows 11 PowerShell, hidden password prompts fall back to visible prompts, so use non-interactive setup if you want to avoid typing secrets on screen
 - the launcher uses `--auth-retry nointeract` so the managed CLI path keeps using the generated auth file instead of surfacing a separate username/password login box
+- the Go mirror keeps the same `--auth-retry nointeract` launcher behavior and the same TOTP/static-suffix handling
 - use `dashboard openvpn.connect --auto` after a five-failure lockout to re-enable reconnect attempts
 - use `dashboard openvpn.connect` if you want one connection attempt without turning reconnect back on

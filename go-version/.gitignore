@@ -1,0 +1,10 @@
+cli/connect
+cli/connect.exe
+cli/disconnect
+cli/disconnect.exe
+cli/noreconnect
+cli/noreconnect.exe
+cli/setup
+cli/setup.exe
+coverage.out
+go-version

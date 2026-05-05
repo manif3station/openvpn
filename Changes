@@ -1,5 +1,11 @@
 Revision history for openvpn
 
+0.06 2026-05-05
+    - added `go-version/` as a standalone Go mirror for `setup`, `connect`, `disconnect`, and `noreconnect`
+    - kept the Go mirror source-only in the repository while documenting build scripts that produce the Windows command-shaped executables on demand
+    - mirrored the canonical `USERNAME`, `PASSWORD`, `MFA`, and `CONFIG` env contract and legacy `OPENVPN_*` compatibility in the Go implementation
+    - added Docker-verified Go tests with `100.0%` statement coverage for the standalone mirror package
+
 0.05 2026-05-05
     - added the short `USERNAME`, `PASSWORD`, `MFA`, and `CONFIG` env contract while keeping legacy `OPENVPN_*` keys readable
     - added `-c` and `--config` to `dashboard openvpn.setup`

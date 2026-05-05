@@ -11,6 +11,7 @@
 ```bash
 docker compose -f ~/projects/skills/docker-compose.testing.yml run --rm perl-test bash -lc 'cd /workspace/skills/openvpn && prove -lvr t'
 docker compose -f ~/projects/skills/docker-compose.testing.yml run --rm perl-test bash -lc 'cd /workspace/skills/openvpn && rm -rf cover_db /workspace/cover_db/* && HARNESS_PERL_SWITCHES=-MDevel::Cover prove -lvr t && cover -report text'
+docker run --rm -v ~/projects/skills/skills/openvpn/go-version:/work -w /work golang:1.22-bookworm bash -lc '/usr/local/go/bin/go test ./mirror -coverprofile=coverage.out && /usr/local/go/bin/go tool cover -func=coverage.out'
 ```
 
 ## Latest Result
@@ -49,3 +50,8 @@ docker compose -f ~/projects/skills/docker-compose.testing.yml run --rm perl-tes
   - `macdev` and `windev` were down for this ticket, so there is no live host integration proof for the new Windows-oriented layout in this release
   - Linux, macOS, and Windows code paths are covered by automated tests inside Docker
 - `cover_db` was removed after verification
+- Go mirror verification:
+  - Docker Go tests passed: `ok github.mf/manif3station/openvpn/go-version/mirror`
+  - Docker Go coverage passed: `100.0%` statements for `github.mf/manif3station/openvpn/go-version/mirror`
+  - generated `.exe` files were not kept in `go-version/`; the repo remains source-only for the standalone mirror
+  - no live `macdev` or `windev` integration proof was required for this ticket

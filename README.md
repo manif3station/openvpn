@@ -8,6 +8,8 @@
 
 It saves the user from manually re-entering the username, password, and current 2FA suffix every time the OpenVPN tunnel drops and needs to come back.
 
+It also now ships a standalone Go mirror under `go-version/` so the same workflow can run on Windows without the Developer Dashboard runtime.
+
 ## Problem It Solves
 
 Some OpenVPN deployments accept a normal username but require the password field to end with a changing six-digit 2FA value. When the tunnel drops, a plain OpenVPN reconnect path cannot complete by itself because it needs that extra suffix again. That breaks unattended reconnect and forces the user back into manual recovery.
@@ -40,6 +42,7 @@ This skill adds:
 - `dashboard openvpn.noreconnect`
 - a collector declared in `config/config.json`
 - an indicator template that renders as `OVPN?`, `OVPN+`, `OVPN!`, `OVPN-`, or `OVPNx`
+- a standalone Go mirror in `go-version/` that can be built into `setup`, `connect`, `disconnect`, and `noreconnect` executables
 
 ## Installation
 
@@ -59,6 +62,7 @@ dashboard skills install ~/projects/skills/skills/openvpn
 
 - Linux and macOS use the host `openvpn` binary through the skill-owned Perl launcher module
 - Windows 11 with PowerShell is supported through the same skill-owned Perl launcher module, with Windows-aware process handling, `openvpn.exe` defaults, and a runtime helper directory under `~/openvpn/config/dd-runtime`
+- the standalone Go mirror keeps the same Linux, macOS, and Windows path logic, but this ticket only required Docker verification and no live `macdev` or `windev` integration proof
 - the skill does not install OpenVPN itself; point `OPENVPN_BIN` at your existing binary if it is not already on `PATH`
 
 ## Runtime Dependency
@@ -67,7 +71,17 @@ This skill expects an existing `openvpn` executable on the machine or an explici
 
 The skill does not try to install `openvpn` through `apt` or Homebrew.
 
-The skill ships a [cpanfile](/home/mv/projects/skills/skills/openvpn/cpanfile) so the dependency gate stays explicit. At `0.05`, it records the core Perl modules the skill relies on and also names the skill-local modules used by the implementation.
+The skill ships a [cpanfile](/home/mv/projects/skills/skills/openvpn/cpanfile) so the dependency gate stays explicit. At `0.06`, it records the core Perl modules the skill relies on and also names the skill-local modules used by the implementation.
+
+For the standalone mirror, `go-version/` ships:
+
+- [go.mod](/home/mv/projects/skills/skills/openvpn/go-version/go.mod)
+- [main.go](/home/mv/projects/skills/skills/openvpn/go-version/main.go)
+- [build.sh](/home/mv/projects/skills/skills/openvpn/go-version/build.sh)
+- [build.ps1](/home/mv/projects/skills/skills/openvpn/go-version/build.ps1)
+- [README.md](/home/mv/projects/skills/skills/openvpn/go-version/README.md)
+
+`go-version/` is source-only in Git. Generated `.exe` files are build outputs and are intentionally ignored.
 
 ## How To Use It
 
@@ -111,6 +125,30 @@ Collector mode used by DD:
 
 ```bash
 dashboard openvpn.connect --collector
+```
+
+Standalone Go mirror without Developer Dashboard:
+
+```bash
+cd ~/projects/skills/skills/openvpn/go-version
+go run . setup
+go run . connect --auto
+```
+
+Build the Windows command-shaped mirror from macOS or Linux:
+
+```bash
+cd ~/projects/skills/skills/openvpn/go-version
+./build.sh
+```
+
+Use the built Windows mirror:
+
+```powershell
+./cli/setup.exe -u alice -p 'secret-password' -2fa JBSWY3DPEHPK3PXP -c '~/openvpn/config/work.ovpn'
+./cli/connect.exe --auto
+./cli/noreconnect.exe
+./cli/disconnect.exe
 ```
 
 ## Setup File
@@ -235,3 +273,4 @@ If reconnect fails five times in a row, the collector disables reconnect and lea
 - `docs/usage.md`
 - `docs/changes/2026-05-01-initial-release.md`
 - `docs/changes/2026-05-05-windows-autologin-layout.md`
+- `docs/changes/2026-05-05-go-mirror.md`
