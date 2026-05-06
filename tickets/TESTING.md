@@ -67,3 +67,14 @@ docker run --rm -v ~/projects/skills/skills/openvpn/go-version:/work -w /work go
     - result payloads now include `log_file`
   - generated `.exe` files were not kept in `go-version/`; the repo remains source-only for the standalone mirror
   - no live `macdev` or `windev` integration proof was required for this ticket
+
+## Latest Verification For `DD-075`
+
+- Functional test:
+  - `docker compose -f ~/projects/skills/docker-compose.testing.yml run --rm perl-test bash -lc 'cd /workspace/skills/openvpn && prove -lvr t'`
+  - Result: pass
+  - Test count: `Files=9, Tests=152`
+- Coverage test:
+  - `docker compose -f ~/projects/skills/docker-compose.testing.yml run --rm perl-test bash -lc 'cd /workspace/skills/openvpn && rm -rf cover_db /workspace/cover_db/* && HARNESS_PERL_SWITCHES=-MDevel::Cover prove -lvr t && cover -report text'`
+  - Result: pass
+  - Coverage: `100.0%` statement and `100.0%` subroutine for `lib/OpenVPN/Launcher.pm`, `lib/OpenVPN/Manager.pm`, and `lib/OpenVPN/TOTP.pm`

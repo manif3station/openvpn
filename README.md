@@ -59,6 +59,12 @@ For local development in this workspace:
 dashboard skills install ~/projects/skills/skills/openvpn
 ```
 
+## License
+
+`openvpn` is released under the MIT License.
+
+See [LICENSE](LICENSE).
+
 ## Platform Notes
 
 - Linux and macOS use the host `openvpn` binary through the skill-owned Perl launcher module

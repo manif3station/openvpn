@@ -1,5 +1,9 @@
 Revision history for openvpn
 
+0.09 2026-05-06
+    - added an explicit MIT license to the `openvpn` skill
+    - documented the MIT license in the README
+
 0.08 2026-05-05
     - moved `--config` ahead of the managed `--auth-user-pass` override in both the Perl launcher and the standalone Go mirror so profile-level `auth-user-pass` directives do not override the generated username and password helper file
     - tightened launcher tests to prove the managed auth override is emitted after the profile path in both runtimes
