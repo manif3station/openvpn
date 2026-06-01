@@ -47,16 +47,10 @@ This skill adds:
 
 ## Installation
 
-Install from the skill repository:
+Install the skill into Developer Dashboard by repo name:
 
 ```bash
-dashboard skills install git@github.mf:manif3station/openvpn.git
-```
-
-For local development in this workspace:
-
-```bash
-dashboard skills install ~/projects/skills/skills/openvpn
+dashboard skills install openvpn
 ```
 
 ## License
